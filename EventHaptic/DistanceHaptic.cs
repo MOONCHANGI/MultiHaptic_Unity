@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 
-// 🔴 같은 namespace Haptics 안에 있으므로, 위 파일의 Manager를 바로 가져다 씁니다.
 namespace Haptics
 {
     public class DistanceHaptic : MonoBehaviour
@@ -10,7 +9,7 @@ namespace Haptics
         public string playerTag = "Player";
 
         [Header("Haptic Parameters")]
-        public string commandType = "vibR";
+        public string commandType = "vibR"; // 예: vibR
 
         public float maxDistance = 5.0f;
         public float minDistance = 1.0f;
@@ -18,12 +17,8 @@ namespace Haptics
         [Range(0, 180)] public int minIntensity = 0;
         [Range(0, 180)] public int maxIntensity = 180;
 
-        [Header("Optimization")]
-        public float updateInterval = 0.1f;
-        public int changeThreshold = 5;
-
-        private float _timer;
-        private int _lastSentValue = -1;
+        // [삭제] 프레임 버퍼 방식에서는 타이머가 필요 없습니다.
+        // public float updateInterval = 0.1f; ...
 
         private void Start()
         {
@@ -37,11 +32,9 @@ namespace Haptics
         private void Update()
         {
             if (targetPlayer == null) return;
+            if (HapticManager.Instance == null) return;
 
-            _timer += Time.deltaTime;
-            if (_timer < updateInterval) return;
-            _timer = 0f;
-
+            // 매 프레임 계산
             CalculateAndSend();
         }
 
@@ -56,17 +49,9 @@ namespace Haptics
                 intensity = (int)Mathf.Lerp(minIntensity, maxIntensity, t);
             }
 
-            bool isDiffBig = Mathf.Abs(intensity - _lastSentValue) >= changeThreshold;
-            bool isTurningOff = (_lastSentValue > 0 && intensity == 0);
-
-            if (isDiffBig || isTurningOff)
-            {
-                if (HapticManager.Instance != null)
-                {
-                    HapticManager.Instance.SendCommand($"{commandType}={intensity}");
-                    _lastSentValue = intensity;
-                }
-            }
+            // [수정] 직접 명령(SendCommand) 대신, 프레임 버퍼에 값 등록(SetFrameValue)
+            // 이렇게 하면 타임라인의 진동과 자연스럽게 섞입니다.
+            HapticManager.Instance.SetFrameValue(commandType, intensity);
         }
 
         private void OnDrawGizmosSelected()
